@@ -4,7 +4,6 @@ import json
 import logging
 import os
 import time
-import traceback
 from typing import Any, Dict
 
 from core.state import TuningState
@@ -189,13 +188,10 @@ def parse_node(state: TuningState) -> Dict[str, Any]:
 
     tool_calls = getattr(last_msg, "tool_calls", None) or []
 
-    # Step budget reached — defer to harness guard for final decision
-    if state["step"] > state["max_steps"]:
-        logger.info("parse_node: step=%d > max_steps=%d, routing to harness guard",
-                    state["step"], state["max_steps"])
-        return {"next_action": "guard"}
-
     # --- branch 1: tool calls (execute all inline, return ToolMessages) ---
+    # Must run before any routing that would leave the AIMessage's tool_calls
+    # unanswered — the OpenAI-format API requires every tool_call_id to be
+    # followed by a matching ToolMessage before the next assistant turn.
     if tool_calls:
         valid = []
         for tc in tool_calls:
@@ -223,6 +219,11 @@ def parse_node(state: TuningState) -> Dict[str, Any]:
         return {"next_action": "parse_error"}
 
     # --- branch 2: JSON config → invoke rate_explorer ---
+    # Config proposals must be honored even after the step budget is
+    # exhausted; otherwise the safety valve at guard_node (step > max_steps
+    # + 3) is unreachable because step only advances on rate_explorer
+    # completion. Guard is only invoked below when the LLM produces neither
+    # a tool_call nor a valid config.
     raw = last_msg.content
     logger.info("parse_node: no tool_calls, trying JSON config extraction...")
 
@@ -334,128 +335,7 @@ def parse_node(state: TuningState) -> Dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
-# 5. deploy_and_test_node
-# ---------------------------------------------------------------------------
-
-def deploy_and_test_node(state: TuningState) -> Dict[str, Any]:
-    pending = state["pending_config"]
-    url = state["config_server_url"]
-    target_tps = state["target_tps"]
-    tx_number = target_tps * 100
-    test_payload = TEST.format(target_tps, tx_number)
-
-    logger.info("deploy_and_test_node: deploying config with %d overrides...",
-                len(pending))
-    logger.debug("deploy_and_test_node config: %s", json.dumps(pending))
-
-    try:
-        tps, latency, success_rate, effective_tps = _run_test(
-            url, pending, test_payload, tx_number
-        )
-    except Exception as exc:
-        logger.error("deploy_and_test_node: fatal error: %s", exc)
-        logger.debug(traceback.format_exc())
-        return {
-            "step": state["step"] + 1,
-            "current_config": pending,
-            "history": [
-                make_history_entry(f"Test failed: {exc}", pending, 0, 0, 0, 0),
-            ],
-            "messages": [
-                make_test_human_msg(0, 0, 0, 0, config=pending, error=str(exc)),
-            ],
-        }
-
-    is_best = effective_tps > state["best_effective_tps"]
-    label = " (NEW BEST)" if is_best else ""
-
-    logger.info(
-        "deploy_and_test_node: TPS=%.1f Latency=%.3fs SuccessRate=%.1f%% EffectiveTPS=%.1f%s",
-        tps, latency, success_rate * 100, effective_tps, label,
-    )
-
-    update: Dict[str, Any] = {
-        "step": state["step"] + 1,
-        "current_config": pending,
-        "messages": [
-            make_test_human_msg(tps, latency, success_rate, effective_tps,
-                                 config=pending),
-        ],
-        "history": [
-            make_history_entry(
-                f"Deployed {len(pending)} overrides. "
-                f"TPS={tps:.1f} EffectiveTPS={effective_tps:.1f}{label}",
-                pending, tps, latency, success_rate, effective_tps,
-            ),
-        ],
-    }
-    if is_best:
-        update["best_effective_tps"] = effective_tps
-        update["best_config"] = pending
-    return update
-
-
-
-# ---------------------------------------------------------------------------
-# 5. deploy_and_test_node (deprecated — replaced by rate_explorer subgraph)
-# ---------------------------------------------------------------------------
-
-def deploy_and_test_node(state: TuningState) -> Dict[str, Any]:
-    from utils.utils import run_test_with_retry
-    pending = state["pending_config"]
-    url = state["config_server_url"]
-    target_tps = state["target_tps"]
-    tx_number = target_tps * 100
-    test_payload = TEST.format(target_tps, tx_number)
-
-    logger.info("deploy_and_test_node: deploying config with %d overrides...",
-                len(pending))
-    try:
-        tps, latency, success_rate, effective_tps = run_test_with_retry(
-            url, pending, test_payload, tx_number
-        )
-    except Exception as exc:
-        logger.error("deploy_and_test_node: fatal error: %s", exc)
-        return {
-            "step": state["step"] + 1,
-            "current_config": pending,
-            "history": [
-                make_history_entry(f"Test failed: {exc}", pending, 0, 0, 0, 0),
-            ],
-            "messages": [
-                make_test_human_msg(0, 0, 0, 0, config=pending, error=str(exc)),
-            ],
-        }
-
-    is_best = effective_tps > state.get("best_effective_tps", 0)
-    label = " (NEW BEST)" if is_best else ""
-    logger.info(
-        "deploy_and_test_node: TPS=%.1f Latency=%.3fs SuccessRate=%.1f%% EffectiveTPS=%.1f%s",
-        tps, latency, success_rate * 100, effective_tps, label,
-    )
-
-    update = {
-        "step": state["step"] + 1,
-        "current_config": pending,
-        "messages": [
-            make_test_human_msg(tps, latency, success_rate, effective_tps, config=pending),
-        ],
-        "history": [
-            make_history_entry(
-                f"Deployed {len(pending)} overrides. "
-                f"TPS={tps:.1f} EffectiveTPS={effective_tps:.1f}{label}",
-                pending, tps, latency, success_rate, effective_tps,
-            ),
-        ],
-    }
-    if is_best:
-        update["best_effective_tps"] = effective_tps
-        update["best_config"] = pending
-    return update
-
-
-# ---------------------------------------------------------------------------
-# 5b. guard_node — Harness termination gate
+# 5. guard_node — Harness termination gate
 # ---------------------------------------------------------------------------
 
 def guard_node(state: TuningState) -> Dict[str, Any]:

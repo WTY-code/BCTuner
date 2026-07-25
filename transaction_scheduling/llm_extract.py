@@ -358,7 +358,7 @@ def extract_with_retry(source: str, max_retries: int = 3) -> Tuple[dict, int, Li
         except (json.JSONDecodeError, ValueError) as e:
             err_msg = f"JSON parse error: {e}\nRaw output (first 500):\n{raw[:500]}"
             print(f"  Parse failed: {e}")
-            prompt = build_prompt(condensed, feedback=err_msg)
+            prompt = build_prompt(source[:10000], feedback=err_msg)
             last_errors = [err_msg]
             continue
 

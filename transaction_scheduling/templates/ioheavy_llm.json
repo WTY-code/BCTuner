@@ -11,12 +11,16 @@
         {
           "type": "iterate",
           "var": "i",
-          "start": "0",
+          "start": "${arg.0}",
           "count": "${arg.1}",
           "body": [
             {
+              "type": "read",
+              "key": "k:${arg.2}_${arg.3}"
+            },
+            {
               "type": "write",
-              "key": "k:${arg.2}_${arg.0}_${i}"
+              "key": "k:${arg.2}_${arg.3}"
             }
           ]
         }
@@ -27,12 +31,12 @@
         {
           "type": "iterate",
           "var": "i",
-          "start": "0",
+          "start": "${arg.0}",
           "count": "${arg.1}",
           "body": [
             {
               "type": "read",
-              "key": "k:${arg.2}_${arg.0}_${i}"
+              "key": "k:${arg.2}_${arg.3}"
             }
           ]
         }

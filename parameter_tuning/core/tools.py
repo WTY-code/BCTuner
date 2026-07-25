@@ -68,6 +68,7 @@ def diagnose() -> str:
         temperature=0.3,
         max_tokens=2048,
         timeout=120,
+        max_retries=6,
     )
 
     try:
@@ -190,6 +191,7 @@ def reflect() -> str:
         temperature=0.5,
         max_tokens=2048,
         timeout=120,
+        max_retries=6,
     )
 
     try:

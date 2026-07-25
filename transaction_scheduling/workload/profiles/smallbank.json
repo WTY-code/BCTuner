@@ -1,0 +1,41 @@
+{
+  "chaincode": "smallbank",
+  "context": {
+    "num_accounts": 200,
+    "zipf_alpha": 1.1,
+    "amount_lo": 1,
+    "amount_hi": 1000
+  },
+  "functions": [
+    {
+      "name": "create_account",
+      "weight": 0.05,
+      "args": ["acct_id_uniform"]
+    },
+    {
+      "name": "deposit_checking",
+      "weight": 0.20,
+      "args": ["amount_int", "acct_id_uniform"]
+    },
+    {
+      "name": "write_check",
+      "weight": 0.15,
+      "args": ["amount_int", "acct_id_zipf"]
+    },
+    {
+      "name": "transact_savings",
+      "weight": 0.15,
+      "args": ["amount_int", "acct_id_zipf"]
+    },
+    {
+      "name": "send_payment",
+      "weight": 0.30,
+      "args": ["amount_int", "acct_id_zipf", "acct_id_zipf"]
+    },
+    {
+      "name": "amalgamate",
+      "weight": 0.15,
+      "args": ["acct_id_zipf", "acct_id_zipf"]
+    }
+  ]
+}

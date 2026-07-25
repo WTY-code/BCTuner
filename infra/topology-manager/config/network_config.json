@@ -4,16 +4,16 @@
     {
       "name": "machine1",
       "public_ip": "",
-      "private_ip": "xxx.xxx.xxx.xxx",
-      "user": "username",
-      "password": "yourpassword"
+      "private_ip": "192.168.0.153",
+      "user": "root",
+      "password": "fabric_RUC@1937"
     },
     {
       "name": "machine2",
       "public_ip": "",
-      "private_ip": "xxx.xxx.xxx.xxx",
-      "user": "username",
-      "password": "yourpassword"
+      "private_ip": "192.168.0.212",
+      "user": "root",
+      "password": "fabric_RUC@1937"
     }
   ],
   "topology": {

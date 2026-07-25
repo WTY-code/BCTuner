@@ -42,6 +42,8 @@ artifacts/histograms/*
 data/batch_experiments/*
 !data/batch_experiments/.gitkeep
 data/experiments/
+# Phase-2 live scheduling pipeline outputs (workload.jsonl, per-tx.jsonl, summaries)
+experiments/
 data/ioheavy_experiment/
 data/ioheavy_workload/
 data/smallbank_experiment/
@@ -111,3 +113,5 @@ infra/caliper-benchmarks/*.json
 
 # Static chaincode reference repos (external, not tracked)
 static/chaincode/
+
+CLAUDE.md

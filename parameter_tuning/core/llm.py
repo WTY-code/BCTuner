@@ -12,6 +12,7 @@ def make_llm() -> ChatOpenAI:
         temperature=0.8,
         max_tokens=16384,
         timeout=600,
+        max_retries=6,
     )
     return llm.bind_tools(
         [diagnose, retrieve_knowledge, reflect],
