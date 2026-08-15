@@ -30,10 +30,17 @@ auriga/
 ├── parameter_tuning/                      paper §III — harness-governed agent
 │   ├── main.py                            CLI entry point
 │   ├── core/                              graph, nodes, prompts, llm, state, tools
+│   │   └── prompts.py                     system prompts for all LLM roles (main agent,
+│   │                                        rate_explorer, summarizer, diagnose, reflect,
+│   │                                        context compression)
 │   ├── utils/                             SDK, metrics, context compression
-│   └── knowledge/                         semantic memory (KBs)
-│       ├── para_explain.jsonl             Fabric parameter semantics
-│       └── topology_kb.jsonl              per-topology cliff profiles
+│   ├── knowledge/                         semantic memory (KBs)
+│   │   ├── para_explain.jsonl             Fabric parameter semantics
+│   │   └── topology_kb.jsonl              per-topology cliff profiles
+│   └── temp/                              runtime outputs (generated on first run)
+│       └── run.log                        per-step tuning trajectory: tool calls, LLM
+│                                            thoughts, rate_explorer probes, and final
+│                                            effective-TPS achieved at each iteration
 │
 ├── transaction_scheduling/                paper §IV — predictive scheduler
 │   ├── run_pipeline.py                    CLI driver — end-to-end scheduling demo
@@ -116,7 +123,7 @@ read and write Fabric parameters on the target network.
 
 ```bash
 cd parameter_tuning
-python main.py --url http://127.0.0.1:8080 --topology 8p --max-steps 10 --tps 2000
+  python main.py --url http://127.0.0.1:8080 --topology 8p --max-steps 10 --tps 2000
 ```
 
 Key arguments:

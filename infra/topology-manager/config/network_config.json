@@ -4,14 +4,14 @@
     {
       "name": "machine1",
       "public_ip": "",
-      "private_ip": "192.168.0.153",
+      "private_ip": "192.168.0.228",
       "user": "root",
       "password": "fabric_RUC@1937"
     },
     {
       "name": "machine2",
       "public_ip": "",
-      "private_ip": "192.168.0.212",
+      "private_ip": "192.168.0.233",
       "user": "root",
       "password": "fabric_RUC@1937"
     }
